@@ -101,11 +101,12 @@ corrplot::corrplot(cor(as.data.frame(dat) |> dplyr::select(RED,
 
 ## Modeling
 
-Modeling using logistic regression because we are primarily trying to determine whether a tree is live or dead.
+Modeling using logistic regression because we are primarily trying to
+determine whether a tree is live or dead.
 
 ```{r}
 logit.dat = training.points |>
-  # dplyr::mutate(TreeCondBinary = as.factor(ifelse(TreeCond == "Live", 1, 0))) |> 
+  dplyr::mutate(TreeCondBinary = as.factor(ifelse(TreeCond == "Live", 1, 0))) |>
   cbind(dat)
 
 set.seed(123)  # Ensures reproducibility
@@ -134,6 +135,7 @@ summary(model4)
 ```
 
 Model Validation
+
 ```{r}
 
 test.data = as.data.frame(test.data)
@@ -146,6 +148,7 @@ test.data$PredictedClass <- ifelse(test.data$PredictedProbs > 0.5, 1, 0)
 ```
 
 Confusion Matrix
+
 ```{r}
 # Convert to factors for confusion matrix
 test.data$TreeCond <- as.factor(test.data$TreeCond)
@@ -157,7 +160,21 @@ print(conf.matrix)
 ```
 
 
-### Plots
+## Apply Model to Region
+
+Create Raster Stack
+```{r}
+raster.stack = c(RED |> terra::mask(HPCC),
+                 EVI |> terra::mask(HPCC),
+                 CHM |> terra::resample(RED) |> terra::mask(HPCC))
+
+
+
+```
+
+
+## Plots
+
 ```{r}
 plot(NDVI)
 plot(HPCC$geometry, add = T)
