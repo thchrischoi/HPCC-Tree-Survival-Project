@@ -1,21 +1,27 @@
+---
+editor_options: 
+  markdown: 
+    wrap: 72
+---
 
+## Standing Live Detection
 
+Christopher Tsz hin Choi NREL 03/26/2025
 
+------------------------------------------------------------------------
 
-#####################
-## Packages
-#####################
+### Packages
 
+```{r}
 library(sf)
 library(terra)
 library(corrplot)
 library(caret)  # For confusionMatrix function
+```
 
+### Data
 
-#####################
-## Data
-#####################
-
+```{r}
 setwd('N:/Research/Evangelista/EVANGELISTA GROUP_Data/Projects/NewMexicoHighlands/2025_Work/HPCC_Tree_Survival_Project/GIS Data')
 
 ##### Vector
@@ -38,12 +44,11 @@ terra::rast('Orthoimagery/2022_USFS_Imagery/Hermits_Peak/Hermits_Peak/Ortho_Herm
 ## LiDAR
 CHM = terra::rast('2023_LiDAR/Canopy_Height_Model_2023_Raster/HPCC_2023_chm.tif') |>
   terra::crop(usfs.ortho)
+```
 
+### Separate bands and create indices
 
-#####################
-## Create Individual bands
-#####################
-
+```{r}
 RED = usfs.ortho$Ortho_HermitsPeak2022_3610554_sw_3_1
 names(RED) <- "RED" ## Rename band to recognizable name
 
@@ -69,10 +74,6 @@ SAVI = ((NIR - RED) / (NIR + RED + 0.5)) * 1.5
 names(SAVI) <- "SAVI"
 
 
-#####################
-## Sampling
-#####################
-
 dat = training.points |>
   dplyr::mutate(RED = (terra::extract(RED, training.points)[,2]),
                 GREEN = (terra::extract(GREEN, training.points)[,2]),
@@ -82,12 +83,11 @@ dat = training.points |>
                 EVI = (terra::extract(EVI, training.points)[,2]),
                 SAVI = (terra::extract(SAVI, training.points)[,2]),
                 CHM = (terra::extract(CHM, training.points)[,2]))
+```
 
+### Data exploration (Testing for correlation)
 
-#####################
-## Correlation Plot
-#####################
-
+```{r}
 corrplot::corrplot(cor(as.data.frame(dat) |> dplyr::select(RED, 
                                                GREEN,
                                                BLUE,
@@ -97,12 +97,13 @@ corrplot::corrplot(cor(as.data.frame(dat) |> dplyr::select(RED,
                                                SAVI,
                                                CHM)),
                     method="number",shade.col=NA, tl.col="black", tl.srt=45)
+```
 
-
-#####################
 ## Modeling
-#####################
 
+Modeling using logistic regression because we are primarily trying to determine whether a tree is live or dead.
+
+```{r}
 logit.dat = training.points |>
   # dplyr::mutate(TreeCondBinary = as.factor(ifelse(TreeCond == "Live", 1, 0))) |> 
   cbind(dat)
@@ -130,7 +131,10 @@ summary(model2)
 summary(model3)
 summary(model4)
 
-### Model Validation
+```
+
+Model Validation
+```{r}
 
 test.data = as.data.frame(test.data)
 
@@ -139,9 +143,10 @@ test.data$PredictedProbs <- predict(model4, newdata = test.data, type = "respons
 
 # Convert probabilities to binary predictions (threshold = 0.5)
 test.data$PredictedClass <- ifelse(test.data$PredictedProbs > 0.5, 1, 0)
+```
 
-
-
+Confusion Matrix
+```{r}
 # Convert to factors for confusion matrix
 test.data$TreeCond <- as.factor(test.data$TreeCond)
 test.data$PredictedClass <- as.factor(test.data$PredictedClass)
@@ -149,16 +154,15 @@ test.data$PredictedClass <- as.factor(test.data$PredictedClass)
 # Generate confusion matrix
 conf.matrix <- caret::confusionMatrix(test.data$PredictedClass, test.data$TreeCondBinary)
 print(conf.matrix)
+```
 
 
-#####################
-## Plot
-#####################
+### Plots
+```{r}
 plot(NDVI)
 plot(HPCC$geometry, add = T)
 
 
 plot(CHM$Band_1)
 plot(HPCC$geometry, add = T)
-
-
+```
