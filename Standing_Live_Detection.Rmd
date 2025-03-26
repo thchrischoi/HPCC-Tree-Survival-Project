@@ -162,16 +162,33 @@ print(conf.matrix)
 
 ## Apply Model to Region
 
-Create Raster Stack
+### Create Raster Stack and convert to dataframe
 ```{r}
 raster.stack = c(RED |> terra::mask(HPCC),
                  EVI |> terra::mask(HPCC),
                  CHM |> terra::resample(RED) |> terra::mask(HPCC))
 
 
+raster.df = as.data.frame(raster.stack, na.rm = T)
 
 ```
+### Predict using raster dataframe
+```{r}
+## Predict probabilities
+raster.df$PredictedProbs <- predict(model4, newdata = raster.df, type = 'response')
 
+## Convert probabilities to binary class
+raster.df$PredictedProbs <- ifelse(raster.df$PRedictedProbs > 0.5, 1, 0)
+```
+
+### Apply to raster
+```{r}
+predicted.raster <- RED ## Use RED reaster as template
+terra::values(predicted.raster) <- raster.df$PredictedClass ## Assign prediction
+
+# writeRaster(predicted.raster, "Ouputs/Tree_Condition_Prediction_Test.tif", foramt = 'GTiff', overwrite = T)
+
+```
 
 ## Plots
 
@@ -182,4 +199,6 @@ plot(HPCC$geometry, add = T)
 
 plot(CHM$Band_1)
 plot(HPCC$geometry, add = T)
+
+plot(predicted.raster)
 ```
